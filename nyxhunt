@@ -4,6 +4,7 @@ import sys
 import time
 import argparse
 import os
+import subprocess
 
 # ===== META =====
 TOOL_NAME = "NYXHUNT"
@@ -79,11 +80,31 @@ def show_last_result():
         for line in f:
             print(GREEN + " - " + line.strip() + RESET)
 
+# ===== UPDATE FEATURE =====
+def update_tool():
+    print(CYAN + "⚡ Updating NYXHUNT...\n" + RESET)
+
+    for i in range(0, 101, 5):
+        progress_bar(i)
+        time.sleep(0.08)
+
+    print("\n")
+    try:
+        subprocess.run(
+            "curl -sSL https://raw.githubusercontent.com/zvlrxq-onyx/nyxhunt/main/install.sh | bash",
+            shell=True,
+            check=True
+        )
+        print(GREEN + "⚡ NYXHUNT successfully updated! ⚡" + RESET)
+    except subprocess.CalledProcessError:
+        print(RED + "[!] Update failed. Please try again." + RESET)
+
 # ===== MAIN =====
 def main():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--version", action="store_true")
     parser.add_argument("--result", action="store_true")
+    parser.add_argument("--update", action="store_true")
     args = parser.parse_args()
 
     if args.version:
@@ -92,6 +113,10 @@ def main():
 
     if args.result:
         show_last_result()
+        sys.exit(0)
+
+    if args.update:
+        update_tool()
         sys.exit(0)
 
     print(CYAN + ASCII_ART + RESET)
