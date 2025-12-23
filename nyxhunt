@@ -1,0 +1,136 @@
+#!/usr/bin/env python3
+import socket
+import sys
+import time
+import argparse
+import os
+
+# ===== META =====
+TOOL_NAME = "NYXHUNT"
+VERSION = "v1.3 ⚡"
+RESULT_FILE = os.path.expanduser("~/.nyxhunt_last_result.txt")
+
+# ===== COLORS =====
+CYAN   = "\033[38;2;0;255;255m"      # Cyan neon
+YELLOW = "\033[38;2;255;220;120m"    # Kuning terang
+GREEN  = "\033[38;2;100;255;180m"    # Hijau neon
+RED    = "\033[38;2;255;120;120m"    # Merah soft
+WHITE  = "\033[97m"
+RESET  = "\033[0m"
+
+# ===== ASCII ART =====
+ASCII_ART = r"""
+ _____  ___   ___  ___  ___  ___       __    __   ____  ____  _____  ___  ___________  
+(\"   \|"  \ |"  \/"  ||"  \/"  |     /" |  | "\ ("  _||_ " |(\"   \|"  \("     _   ") 
+|.\\   \    | \   \  /  \   \  /     (:  (__)  :)|   (  ) : ||.\\   \    |)__/  \\__/  
+|: \.   \\  |  \\  \/    \\  \/       \/      \/ (:  |  | . )|: \.   \\  |   \\_ /     
+|.  \    \. |  /   /     /\.  \       //  __  \\  \\ \__/ // |.  \    \. |   |.  |     
+|    \    \ | /   /     /  \   \     (:  (  )  :) /\\ __ //\ |    \    \ |   \:  |     
+ \___|\____\)|___/     |___/\___|     \__|  |__/ (__________) \___|\____\)    \__|     
+"""
+
+# ===== WORDLIST =====
+WORDLIST = [
+    "www","mail","ftp","cpanel","webmail","admin","api","dev","test",
+    "blog","shop","portal","dashboard","img","static","cdn","m","forum",
+    "beta","staging","vpn","ns1","ns2","smtp","pop","imap","secure","auth"
+]
+
+# ===== UTILS =====
+def type_effect(text, delay=0.02):
+    for c in text:
+        sys.stdout.write(c)
+        sys.stdout.flush()
+        time.sleep(delay)
+    print()
+
+def clean_domain(url):
+    url = url.strip()
+    url = url.replace("https://", "").replace("http://", "")
+    url = url.split("/")[0]
+    if url.startswith("www."):
+        url = url[4:]
+    return url
+
+def resolve_dns(host):
+    try:
+        socket.gethostbyname(host)
+        return True
+    except socket.gaierror:
+        return False
+
+def progress_bar(percent, length=30):
+    filled = int(length * percent / 100)
+    bar = CYAN + "█" * filled + WHITE + "-" * (length - filled)
+    sys.stdout.write(f"\r[{bar}] {YELLOW}{percent}%{RESET}")
+    sys.stdout.flush()
+
+def save_result(subdomains):
+    with open(RESULT_FILE, "w") as f:
+        for s in sorted(subdomains):
+            f.write(s + "\n")
+
+def show_last_result():
+    if not os.path.exists(RESULT_FILE):
+        print(RED + "[!] No previous result found" + RESET)
+        return
+    print(YELLOW + "⚡ Last scan result:" + RESET)
+    with open(RESULT_FILE) as f:
+        for line in f:
+            print(GREEN + " - " + line.strip() + RESET)
+
+# ===== MAIN =====
+def main():
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--version", action="store_true")
+    parser.add_argument("--result", action="store_true")
+    args = parser.parse_args()
+
+    if args.version:
+        print(f"{CYAN}⚡ {TOOL_NAME} {VERSION}{RESET}")
+        sys.exit(0)
+
+    if args.result:
+        show_last_result()
+        sys.exit(0)
+
+    print(CYAN + ASCII_ART + RESET)
+    time.sleep(0.3)
+    type_effect(YELLOW + TOOL_NAME + RESET, 0.05)
+    type_effect(WHITE + "Subdomain Hunting Tool\n" + RESET, 0.02)
+
+    raw = input(YELLOW + "Target URL: " + RESET)
+    domain = clean_domain(raw)
+
+    print()
+    type_effect(YELLOW + f"[*] Hunting subdomains for {domain}...\n" + RESET, 0.02)
+
+    found = set()
+    total = len(WORDLIST)
+
+    for i, word in enumerate(WORDLIST, start=1):
+        sub = f"{word}.{domain}"
+        if resolve_dns(sub):
+            found.add(sub)
+        progress_bar(int((i / total) * 100))
+        time.sleep(0.05)
+
+    print("\n")
+    save_result(found)
+
+    print(CYAN + "=" * 50 + RESET)
+    print(YELLOW + f"⚡ Subdomains found: {len(found)}" + RESET)
+    print(CYAN + "=" * 50 + RESET)
+
+    if found:
+        for s in sorted(found):
+            print(GREEN + " - " + s + RESET)
+    else:
+        print(RED + "No subdomains found." + RESET)
+
+# ===== RUN =====
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print(f"\n{RED}[!] Interrupted{RESET}")
